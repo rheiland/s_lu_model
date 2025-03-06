@@ -305,7 +305,13 @@
                 <attachment_rate conserved="false" units="1/min" description="">0.2</attachment_rate>
                 <max_attachment_distance conserved="false" units="micron" description="">18.0</max_attachment_distance>
                 <min_attachment_distance conserved="false" units="micron" description="">14.0</min_attachment_distance>
+                <prob_polarize conserved="false" units="dimensionless" description="">0.25</prob_polarize>
                 <prolif_saturation conserved="false" units="dimensionless" description="">1</prolif_saturation>
+                <hypoxic_motility_saturation conserved="false" units="dimensionless" description="">38</hypoxic_motility_saturation>
+                <il10_motility_saturation conserved="false" units="dimensionless" description="">0.5</il10_motility_saturation>
+                <hypoxia_il10_motility_bias conserved="false" units="dimensionless" description="">0.5</hypoxia_il10_motility_bias>
+                <tnfa_threshold conserved="false" units="dimensionless" description="">10000</tnfa_threshold>
+                <il10_inhibit_polarization_threshold conserved="false" units="dimensionless" description="">50000</il10_inhibit_polarization_threshold>
             </custom_data>
             <initial_parameter_distributions enabled="false">
           </initial_parameter_distributions>
@@ -473,10 +479,16 @@
                 <attachment_lifetime conserved="false" units="min" description="">60</attachment_lifetime>
                 <attachment_rate conserved="false" units="1/min" description="">0.2</attachment_rate>
                 <il10_threshold conserved="false" units="dimensionless" description="">10000</il10_threshold>
-                <prob_polarize conserved="false" units="dimensionless" description="">0.2</prob_polarize>
                 <polarization_lifetime conserved="false" units="min" description="">120</polarization_lifetime>
+                <prob_polarize conserved="false" units="dimensionless" description="">0.2</prob_polarize>
+                <prolif_saturation conserved="false" units="dimensionless" description="">1</prolif_saturation>
                 <max_attachment_distance conserved="false" units="micron" description="">18.0</max_attachment_distance>
                 <min_attachment_distance conserved="false" units="micron" description="">14.0</min_attachment_distance>
+                <hypoxic_motility_saturation conserved="false" units="dimensionless" description="">38</hypoxic_motility_saturation>
+                <il10_motility_saturation conserved="false" units="dimensionless" description="">0.5</il10_motility_saturation>
+                <hypoxia_il10_motility_bias conserved="false" units="dimensionless" description="">0.5</hypoxia_il10_motility_bias>
+                <tnfa_threshold conserved="false" units="dimensionless" description="">10000</tnfa_threshold>
+                <il10_inhibit_polarization_threshold conserved="false" units="dimensionless" description="">50000</il10_inhibit_polarization_threshold>
             </custom_data>
             <initial_parameter_distributions enabled="false">
           </initial_parameter_distributions>
@@ -645,13 +657,14 @@
                 <attachment_rate conserved="false" units="1/min" description="">0.2</attachment_rate>
                 <polarization_lifetime conserved="false" units="min" description="">120</polarization_lifetime>
                 <prob_polarize conserved="false" units="dimensionless" description="">0.25</prob_polarize>
+                <prolif_saturation conserved="false" units="dimensionless" description="">1</prolif_saturation>
+                <max_attachment_distance conserved="false" units="micron" description="">18.0</max_attachment_distance>
+                <min_attachment_distance conserved="false" units="micron" description="">14.0</min_attachment_distance>
                 <hypoxic_motility_saturation conserved="false" units="dimensionless" description="">38</hypoxic_motility_saturation>
                 <il10_motility_saturation conserved="false" units="dimensionless" description="">0.5</il10_motility_saturation>
                 <hypoxia_il10_motility_bias conserved="false" units="dimensionless" description="">0.5</hypoxia_il10_motility_bias>
                 <tnfa_threshold conserved="false" units="dimensionless" description="">10000</tnfa_threshold>
                 <il10_inhibit_polarization_threshold conserved="false" units="dimensionless" description="">50000</il10_inhibit_polarization_threshold>
-                <max_attachment_distance conserved="false" units="micron" description="">18.0</max_attachment_distance>
-                <min_attachment_distance conserved="false" units="micron" description="">14.0</min_attachment_distance>
             </custom_data>
             <initial_parameter_distributions enabled="false">
           </initial_parameter_distributions>
