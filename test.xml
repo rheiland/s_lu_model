@@ -23,7 +23,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">1440.0</max_time>
+        <max_time units="min">60.0</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
         <dt_diffusion units="min">0.01</dt_diffusion>
@@ -659,7 +659,6 @@
     </cell_definitions>
 
     <user_parameters>
-        <random_seed type="int" units="dimensionless" description="">0</random_seed>
         <immune_activation_time type="double" units="min" description="">20160</immune_activation_time>
         <save_interval_after_therapy_start type="double" units="min" description="">15.0</save_interval_after_therapy_start>
         <SVG_interval_after_therapy_start type="double" units="min" description="">3.0</SVG_interval_after_therapy_start>
