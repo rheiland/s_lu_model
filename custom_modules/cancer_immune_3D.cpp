@@ -297,7 +297,7 @@ void m1_update_phenotype(Cell* pCell, Phenotype& phenotype, double dt) {
 
 void m2_motility( Cell* pCell, Phenotype& phenotype, double dt)
 {	
-
+    std::cout << "m2_motility(): time= " << PhysiCell_globals.current_time << std::endl;
     static int il10_index = microenvironment.find_density_index("il10");
     static int oxygen_index = microenvironment.find_density_index("oxygen");
 
@@ -563,102 +563,9 @@ void setup_microenvironment( void )
 
 void setup_tissue( int init_cell_count, int initial_num_immune_cells )
 {
-	// place a cluster of tumor cells at the center 
-	double cell_radius = cell_defaults.phenotype.geometry.radius; 
-	
-	// double tumor_radius = 
-	// 	parameters.doubles("tumor_radius"); // 250.0; 
-
-	// int init_cell_count = 
-	// 	parameters.ints("init_cell_count"); // 250.0; 
-	
-	Cell* pCell = NULL; 
-	
-	// std::vector<std::vector<double>> positions = create_cell_sphere_positions(cell_radius, tumor_radius); 
-	// std::vector<std::vector<double>> positions = create_cell_circle_positions(cell_radius, tumor_radius); 
-	std::vector<std::vector<double>> positions = create_cell_circle_positions_by_count(init_cell_count); 
-	
-	std::cout << "creating " << positions.size() << " closely-packed tumor cells ... " << std::endl; 
-		
-	for( int i=0; i < positions.size(); i++ )
-	{
-		pCell = create_cell(); // tumor cell 
-		pCell->assign_position( positions[i] );
-	}
-
-	double tumor_radius = -9e9; // 250.0; 
-	double temp_radius = 0.0; 
-	
-	// for the loop, deal with the (faster) norm squared 
-	for( int i=0; i < (*all_cells).size() ; i++ )
-	{
-		temp_radius = norm_squared( (*all_cells)[i]->position ); 
-		if( temp_radius > tumor_radius )
-		{ tumor_radius = temp_radius; }
-	}
-	// now square root to get to radius 
-	tumor_radius = sqrt( tumor_radius ); 
-
-    double proportion_m1_macrophages = 0;
-    double proportion_m2_macrophages = 0;
-	
-	// for( int i=0; i < initial_num_immune_cells; i++ )
-	// {
-	// 	double theta = UniformRandom() * 6.283185307179586476925286766559; 
-	// 	double phi = acos( 2.0*UniformRandom() - 1.0 );  
-	// 	// double radius = NormalRandom( mean_radius, std_radius );
-	// 	double r = tumor_radius * sqrt(UniformRandom()); // Random distance within the circle/sphere
-	// 	double random_value = UniformRandom();
-
-	// 	// Create m1
-		// if (random_value < proportion_m1_macrophages) {
-		// 	pCell = create_cell(*pM1);
-		// 	// pCell->assign_position(tumor_radius * cos(theta) * sin(phi), tumor_radius * sin(theta) * sin(phi), tumor_radius * cos(phi)); // Place the macrophage at the calculated position
-		// 	pCell->assign_position(tumor_radius * cos(theta) * sin(phi), tumor_radius * sin(theta) * sin(phi), 0); // Place the macrophage at the calculated position
-		// }
-		// // Create m2
-		// else {
-		// 	pCell = create_cell(*pM2);
-		// 	// pCell->assign_position(tumor_radius * cos(theta) * sin(phi), tumor_radius * sin(theta) * sin(phi), tumor_radius * cos(phi)); // Place the M1 macrophage at the calculated position
-		// 	pCell->assign_position(tumor_radius * cos(theta) * sin(phi), tumor_radius * sin(theta) * sin(phi), 0); // Place the M1 macrophage at the calculated position
-		// }
-	// }
-	double Xmin = microenvironment.mesh.bounding_box[0]; 
-	double Ymin = microenvironment.mesh.bounding_box[1]; 
-	double Zmin = microenvironment.mesh.bounding_box[2]; 
-
-	double Xmax = microenvironment.mesh.bounding_box[3]; 
-	double Ymax = microenvironment.mesh.bounding_box[4]; 
-	double Zmax = microenvironment.mesh.bounding_box[5]; 
-
-	if( default_microenvironment_options.simulate_2D == true )
-	{
-		Zmin = 0.0; 
-		Zmax = 0.0; 
-	}
-	
-	double Xrange = Xmax - Xmin; 
-	double Yrange = Ymax - Ymin; 
-	double Zrange = Zmax - Zmin; 
-
-	for( int n = 0 ; n < initial_num_immune_cells ; n++ )
-	{
-		std::vector<double> position = {0,0,0}; 
-		position[0] = Xmin + UniformRandom()*Xrange; 
-		position[1] = Ymin + UniformRandom()*Yrange; 
-		position[2] = Zmin + UniformRandom()*Zrange; 
-		
-		if (UniformRandom() < proportion_m1_macrophages) {
-			pCell = create_cell(*pM1);
-			pCell->assign_position(position); // Place the macrophage at the calculated position
-		}
-		// Create m2
-		else {
-			pCell = create_cell(*pM2);
-			pCell->assign_position(position); // Place the M1 macrophage at the calculated position
-		}
-	}
-	
+    // load cells from your CSV file (if enabled)
+	load_cells_from_pugixml();
+	set_parameters_from_distributions();
 	return; 
 }
 

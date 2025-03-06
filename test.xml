@@ -23,7 +23,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">60.0</max_time>
+        <max_time units="min">2880.0</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
         <dt_diffusion units="min">0.01</dt_diffusion>
@@ -561,12 +561,12 @@
                         <enabled>true</enabled>
                         <use_2D>true</use_2D>
                         <chemotaxis>
-                            <enabled>false</enabled>
+                            <enabled>true</enabled>
                             <substrate>il10</substrate>
                             <direction>1</direction>
                         </chemotaxis>
                         <advanced_chemotaxis>
-                            <enabled>true</enabled>
+                            <enabled>false</enabled>
                             <normalize_each_gradient>false</normalize_each_gradient>
                             <chemotactic_sensitivities>
                                 <chemotactic_sensitivity substrate="oxygen">1</chemotactic_sensitivity>
@@ -657,6 +657,13 @@
           </initial_parameter_distributions>
         </cell_definition>
     </cell_definitions>
+
+    <initial_conditions>
+        <cell_positions type="csv" enabled="true">
+            <folder>.</folder>
+            <filename>test_cells.csv</filename>
+        </cell_positions>
+    </initial_conditions>
 
     <user_parameters>
         <immune_activation_time type="double" units="min" description="">20160</immune_activation_time>
