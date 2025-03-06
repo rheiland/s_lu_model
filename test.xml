@@ -23,7 +23,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">4320</max_time>
+        <max_time units="min">1440.0</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
         <dt_diffusion units="min">0.01</dt_diffusion>
@@ -222,7 +222,7 @@
                         <use_2D>true</use_2D>
                         <chemotaxis>
                             <enabled>false</enabled>
-                            <substrate>substrate</substrate>
+                            <substrate>oxygen</substrate>
                             <direction>1</direction>
                         </chemotaxis>
                         <advanced_chemotaxis>
@@ -387,11 +387,11 @@
                     <persistence_time units="min">5</persistence_time>
                     <migration_bias units="dimensionless">0.5</migration_bias>
                     <options>
-                        <enabled>false</enabled>
+                        <enabled>true</enabled>
                         <use_2D>true</use_2D>
                         <chemotaxis>
-                            <enabled>false</enabled>
-                            <substrate>substrate</substrate>
+                            <enabled>true</enabled>
+                            <substrate>tnfa</substrate>
                             <direction>1</direction>
                         </chemotaxis>
                         <advanced_chemotaxis>
@@ -558,19 +558,19 @@
                     <persistence_time units="min">5</persistence_time>
                     <migration_bias units="dimensionless">0.5</migration_bias>
                     <options>
-                        <enabled>false</enabled>
+                        <enabled>true</enabled>
                         <use_2D>true</use_2D>
                         <chemotaxis>
                             <enabled>false</enabled>
-                            <substrate>substrate</substrate>
+                            <substrate>il10</substrate>
                             <direction>1</direction>
                         </chemotaxis>
                         <advanced_chemotaxis>
-                            <enabled>false</enabled>
+                            <enabled>true</enabled>
                             <normalize_each_gradient>false</normalize_each_gradient>
                             <chemotactic_sensitivities>
-                                <chemotactic_sensitivity substrate="oxygen">0.0</chemotactic_sensitivity>
-                                <chemotactic_sensitivity substrate="il10">0.0</chemotactic_sensitivity>
+                                <chemotactic_sensitivity substrate="oxygen">1</chemotactic_sensitivity>
+                                <chemotactic_sensitivity substrate="il10">1</chemotactic_sensitivity>
                                 <chemotactic_sensitivity substrate="tnfa">0.0</chemotactic_sensitivity>
                                 <chemotactic_sensitivity substrate="proliferation factor">0.0</chemotactic_sensitivity>
                                 <chemotactic_sensitivity substrate="substrate">0.0</chemotactic_sensitivity>
