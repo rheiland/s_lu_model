@@ -23,7 +23,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">2880.0</max_time>
+        <max_time units="min">14400.0</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
         <dt_diffusion units="min">0.01</dt_diffusion>
@@ -32,17 +32,17 @@
     </overall>
 
     <parallel>
-        <omp_num_threads>12</omp_num_threads>
+        <omp_num_threads>6</omp_num_threads>
     </parallel>
 
     <save>
         <folder>output</folder>
         <full_data>
-            <interval units="min">20</interval>
+            <interval units="min">120</interval>
             <enable>true</enable>
         </full_data>
         <SVG>
-            <interval units="min">20</interval>
+            <interval units="min">120</interval>
             <enable>true</enable>
             <plot_substrate enabled="false" limits="false">
                 <substrate>oxygen</substrate>
@@ -69,20 +69,20 @@
                 <diffusion_coefficient units="micron^2/min">100000</diffusion_coefficient>
                 <decay_rate units="1/min">0.1</decay_rate>
             </physical_parameter_set>
-            <initial_condition units="mmHg">38</initial_condition>
-            <Dirichlet_boundary_condition units="mmHg" enabled="True">38</Dirichlet_boundary_condition>
+            <initial_condition units="mmHg">160</initial_condition>
+            <Dirichlet_boundary_condition units="mmHg" enabled="True">160</Dirichlet_boundary_condition>
             <Dirichlet_options>
-                <boundary_value ID="xmin" enabled="True">0</boundary_value>
-                <boundary_value ID="xmax" enabled="True">0</boundary_value>
-                <boundary_value ID="ymin" enabled="True">0</boundary_value>
-                <boundary_value ID="ymax" enabled="True">0</boundary_value>
-                <boundary_value ID="zmin" enabled="True">0</boundary_value>
-                <boundary_value ID="zmax" enabled="True">0</boundary_value>
+                <boundary_value ID="xmin" enabled="True">160</boundary_value>
+                <boundary_value ID="xmax" enabled="True">160</boundary_value>
+                <boundary_value ID="ymin" enabled="True">160</boundary_value>
+                <boundary_value ID="ymax" enabled="True">160</boundary_value>
+                <boundary_value ID="zmin" enabled="True">160</boundary_value>
+                <boundary_value ID="zmax" enabled="True">160</boundary_value>
             </Dirichlet_options>
         </variable>
         <variable name="il10" units="dimensionless" ID="1">
             <physical_parameter_set>
-                <diffusion_coefficient units="micron^2/min">100</diffusion_coefficient>
+                <diffusion_coefficient units="micron^2/min">1000</diffusion_coefficient>
                 <decay_rate units="1/min">0.1</decay_rate>
             </physical_parameter_set>
             <initial_condition units="dimensionless">0</initial_condition>
@@ -98,7 +98,7 @@
         </variable>
         <variable name="tnfa" units="dimensionless" ID="2">
             <physical_parameter_set>
-                <diffusion_coefficient units="micron^2/min">100</diffusion_coefficient>
+                <diffusion_coefficient units="micron^2/min">1000</diffusion_coefficient>
                 <decay_rate units="1/min">0.1</decay_rate>
             </physical_parameter_set>
             <initial_condition units="dimensionless">0</initial_condition>
@@ -128,9 +128,25 @@
                 <boundary_value ID="zmax" enabled="False">0</boundary_value>
             </Dirichlet_options>
         </variable>
+        <variable name="mmp" units="dimensionless" ID="4">
+            <physical_parameter_set>
+                <diffusion_coefficient units="micron^2/min">0.1</diffusion_coefficient>
+                <decay_rate units="1/min">0.01</decay_rate>
+            </physical_parameter_set>
+            <initial_condition units="dimensionless">0</initial_condition>
+            <Dirichlet_boundary_condition units="dimensionless" enabled="False">0</Dirichlet_boundary_condition>
+            <Dirichlet_options>
+                <boundary_value ID="xmin" enabled="False">0</boundary_value>
+                <boundary_value ID="xmax" enabled="False">0</boundary_value>
+                <boundary_value ID="ymin" enabled="False">0</boundary_value>
+                <boundary_value ID="ymax" enabled="False">0</boundary_value>
+                <boundary_value ID="zmin" enabled="False">0</boundary_value>
+                <boundary_value ID="zmax" enabled="False">0</boundary_value>
+            </Dirichlet_options>
+        </variable>
         <options>
-            <calculate_gradients>true</calculate_gradients>
-            <track_internalized_substrates_in_each_agent>true</track_internalized_substrates_in_each_agent>
+            <calculate_gradients>false</calculate_gradients>
+            <track_internalized_substrates_in_each_agent>false</track_internalized_substrates_in_each_agent>
             <initial_condition type="matlab" enabled="false">
                 <filename>./config/initial.mat</filename>
             </initial_condition>
@@ -145,12 +161,12 @@
             <phenotype>
                 <cycle code="5" name="live">
                     <phase_transition_rates units="1/min">
-                        <rate start_index="0" end_index="0" fixed_duration="false">0.00072</rate>
+                        <!-- <rate start_index="0" end_index="0" fixed_duration="false">0.00072</rate> -->
+                        <rate start_index="0" end_index="0" fixed_duration="false">0.0004</rate>
                     </phase_transition_rates>
                     <standard_asymmetric_division enabled="False">
                         <asymmetric_division_probability name="cancer cell" units="dimensionless">1.0</asymmetric_division_probability>
-                        <asymmetric_division_probability name="M1" units="dimensionless">0</asymmetric_division_probability>
-                        <asymmetric_division_probability name="M2" units="dimensionless">0</asymmetric_division_probability>
+                        <asymmetric_division_probability name="macrophage" units="dimensionless">1.0</asymmetric_division_probability>
                     </standard_asymmetric_division>
                 </cycle>
                 <death>
@@ -196,13 +212,12 @@
                     <relative_rupture_volume units="dimensionless">2.0</relative_rupture_volume>
                 </volume>
                 <mechanics>
-                    <cell_cell_adhesion_strength units="micron/min">0.4</cell_cell_adhesion_strength>
+                    <cell_cell_adhesion_strength units="micron/min">1</cell_cell_adhesion_strength>
                     <cell_cell_repulsion_strength units="micron/min">10.0</cell_cell_repulsion_strength>
                     <relative_maximum_adhesion_distance units="dimensionless">1.25</relative_maximum_adhesion_distance>
                     <cell_adhesion_affinities>
                         <cell_adhesion_affinity name="cancer cell">1.0</cell_adhesion_affinity>
-                        <cell_adhesion_affinity name="M1">1.0</cell_adhesion_affinity>
-                        <cell_adhesion_affinity name="M2">1.0</cell_adhesion_affinity>
+                        <cell_adhesion_affinity name="macrophage">1.0</cell_adhesion_affinity>
                     </cell_adhesion_affinities>
                     <options>
                         <set_relative_equilibrium_distance enabled="false" units="dimensionless">1.8</set_relative_equilibrium_distance>
@@ -233,7 +248,7 @@
                                 <chemotactic_sensitivity substrate="il10">0.0</chemotactic_sensitivity>
                                 <chemotactic_sensitivity substrate="tnfa">0.0</chemotactic_sensitivity>
                                 <chemotactic_sensitivity substrate="proliferation factor">0.0</chemotactic_sensitivity>
-                                <chemotactic_sensitivity substrate="substrate">0.0</chemotactic_sensitivity>
+                                <chemotactic_sensitivity substrate="mmp">0.0</chemotactic_sensitivity>
                             </chemotactic_sensitivities>
                         </advanced_chemotaxis>
                     </options>
@@ -263,6 +278,12 @@
                         <uptake_rate units="1/min">0</uptake_rate>
                         <net_export_rate units="total substrate/min">0</net_export_rate>
                     </substrate>
+                    <substrate name="mmp">
+                        <secretion_rate units="1/min">0</secretion_rate>
+                        <secretion_target units="substrate density">1</secretion_target>
+                        <uptake_rate units="1/min">0</uptake_rate>
+                        <net_export_rate units="total substrate/min">0</net_export_rate>
+                    </substrate>
                 </secretion>
                 <cell_interactions>
                     <apoptotic_phagocytosis_rate units="1/min">0.0</apoptotic_phagocytosis_rate>
@@ -270,27 +291,23 @@
                     <other_dead_phagocytosis_rate units="1/min">0.0</other_dead_phagocytosis_rate>
                     <live_phagocytosis_rates>
                         <phagocytosis_rate name="cancer cell" units="1/min">0.0</phagocytosis_rate>
-                        <phagocytosis_rate name="M1" units="1/min">0.0</phagocytosis_rate>
-                        <phagocytosis_rate name="M2" units="1/min">0.0</phagocytosis_rate>
+                        <phagocytosis_rate name="macrophage" units="1/min">0.0</phagocytosis_rate>
                     </live_phagocytosis_rates>
                     <attack_rates>
                         <attack_rate name="cancer cell" units="1/min">0.0</attack_rate>
-                        <attack_rate name="M1" units="1/min">0.0</attack_rate>
-                        <attack_rate name="M2" units="1/min">0.0</attack_rate>
+                        <attack_rate name="macrophage" units="1/min">0.0</attack_rate>
                     </attack_rates>
                     <attack_damage_rate units="1/min">1.0</attack_damage_rate>
                     <attack_duration units="min">0.1</attack_duration>
                     <fusion_rates>
                         <fusion_rate name="cancer cell" units="1/min">0.0</fusion_rate>
-                        <fusion_rate name="M1" units="1/min">0.0</fusion_rate>
-                        <fusion_rate name="M2" units="1/min">0.0</fusion_rate>
+                        <fusion_rate name="macrophage" units="1/min">0.0</fusion_rate>
                     </fusion_rates>
                 </cell_interactions>
                 <cell_transformations>
                     <transformation_rates>
                         <transformation_rate name="cancer cell" units="1/min">0.0</transformation_rate>
-                        <transformation_rate name="M1" units="1/min">0.0</transformation_rate>
-                        <transformation_rate name="M2" units="1/min">0.0</transformation_rate>
+                        <transformation_rate name="macrophage" units="1/min">0.0</transformation_rate>
                     </transformation_rates>
                 </cell_transformations>
                 <cell_integrity>
@@ -301,22 +318,27 @@
             <custom_data>
                 <elastic_coefficient conserved="false" units="1/min" description="">0.01</elastic_coefficient>
                 <kill_rate conserved="false" units="1/min" description="">0.06667</kill_rate>
-                <attachment_lifetime conserved="false" units="min" description="">60</attachment_lifetime>
-                <attachment_rate conserved="false" units="1/min" description="">0.2</attachment_rate>
-                <max_attachment_distance conserved="false" units="micron" description="">18.0</max_attachment_distance>
-                <min_attachment_distance conserved="false" units="micron" description="">14.0</min_attachment_distance>
-                <prob_polarize conserved="false" units="dimensionless" description="">0.25</prob_polarize>
+                <max_attachment_distance conserved="false" units="micron" description="">0.0</max_attachment_distance>
+                <min_attachment_distance conserved="false" units="micron" description="">0.0</min_attachment_distance>
+                <il10_motility_saturation conserved="false" units="dimensionless" description="">0</il10_motility_saturation>
+                <hypoxia_il10_motility_bias conserved="false" units="dimensionless" description="">0</hypoxia_il10_motility_bias>
+                <hypoxic_motility_saturation conserved="false" units="dimensionless" description="">0</hypoxic_motility_saturation>
                 <prolif_saturation conserved="false" units="dimensionless" description="">1</prolif_saturation>
-                <hypoxic_motility_saturation conserved="false" units="dimensionless" description="">38</hypoxic_motility_saturation>
-                <il10_motility_saturation conserved="false" units="dimensionless" description="">0.5</il10_motility_saturation>
-                <hypoxia_il10_motility_bias conserved="false" units="dimensionless" description="">0.5</hypoxia_il10_motility_bias>
-                <tnfa_threshold conserved="false" units="dimensionless" description="">10000</tnfa_threshold>
-                <il10_inhibit_polarization_threshold conserved="false" units="dimensionless" description="">50000</il10_inhibit_polarization_threshold>
+                <attachment_rate conserved="false" units="1/min" description="">0</attachment_rate>
+                <polarization_lifetime conserved="false" units="min" description="">0</polarization_lifetime>
+                <il10_inhibition_saturation conserved="false" units="dimensionless" description="">0</il10_inhibition_saturation>
+                <tam_relative_il10_secretion conserved="false" units="dimensionless" description="">0</tam_relative_il10_secretion>
+                <max_polarization_step conserved="false" units="dimensionless" description="">0.0</max_polarization_step>
+                <attachment_prob conserved="false" units="min" description="">0</attachment_prob>
+                <m1_polarization conserved="false" units="dimensionless" description="">0</m1_polarization>
+                <m2_polarization conserved="false" units="dimensionless" description="">0</m2_polarization>
+                <mmp_saturation conserved="false" units="dimensionless" description="">100</mmp_saturation>
             </custom_data>
             <initial_parameter_distributions enabled="false">
           </initial_parameter_distributions>
         </cell_definition>
-        <cell_definition name="M1" ID="1">
+
+        <cell_definition name="macrophage" ID="1">
             <phenotype>
                 <cycle code="5" name="live">
                     <phase_transition_rates units="1/min">
@@ -324,8 +346,7 @@
                     </phase_transition_rates>
                     <standard_asymmetric_division enabled="False">
                         <asymmetric_division_probability name="cancer cell" units="dimensionless">0</asymmetric_division_probability>
-                        <asymmetric_division_probability name="M1" units="dimensionless">1.0</asymmetric_division_probability>
-                        <asymmetric_division_probability name="M2" units="dimensionless">0</asymmetric_division_probability>
+                        <asymmetric_division_probability name="macrophage" units="dimensionless">0</asymmetric_division_probability>
                     </standard_asymmetric_division>
                 </cycle>
                 <death>
@@ -360,7 +381,7 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2000</total>
+                    <total units="micron^3">3000</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
                     <nuclear units="micron^3">540</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
@@ -376,8 +397,7 @@
                     <relative_maximum_adhesion_distance units="dimensionless">1.25</relative_maximum_adhesion_distance>
                     <cell_adhesion_affinities>
                         <cell_adhesion_affinity name="cancer cell">1.0</cell_adhesion_affinity>
-                        <cell_adhesion_affinity name="M1">1.0</cell_adhesion_affinity>
-                        <cell_adhesion_affinity name="M2">1.0</cell_adhesion_affinity>
+                        <cell_adhesion_affinity name="macrophage">1.0</cell_adhesion_affinity>
                     </cell_adhesion_affinities>
                     <options>
                         <set_relative_equilibrium_distance enabled="false" units="dimensionless">1.8</set_relative_equilibrium_distance>
@@ -389,14 +409,14 @@
                     <maximum_number_of_attachments>12</maximum_number_of_attachments>
                 </mechanics>
                 <motility>
-                    <speed units="micron/min">0.75</speed>
+                    <speed units="micron/min">0</speed>
                     <persistence_time units="min">5</persistence_time>
                     <migration_bias units="dimensionless">0.5</migration_bias>
                     <options>
                         <enabled>true</enabled>
                         <use_2D>true</use_2D>
                         <chemotaxis>
-                            <enabled>true</enabled>
+                            <enabled>false</enabled>
                             <substrate>tnfa</substrate>
                             <direction>1</direction>
                         </chemotaxis>
@@ -408,7 +428,7 @@
                                 <chemotactic_sensitivity substrate="il10">0.0</chemotactic_sensitivity>
                                 <chemotactic_sensitivity substrate="tnfa">0.0</chemotactic_sensitivity>
                                 <chemotactic_sensitivity substrate="proliferation factor">0.0</chemotactic_sensitivity>
-                                <chemotactic_sensitivity substrate="substrate">0.0</chemotactic_sensitivity>
+                                <chemotactic_sensitivity substrate="mmp">0.0</chemotactic_sensitivity>
                             </chemotactic_sensitivities>
                         </advanced_chemotaxis>
                     </options>
@@ -421,19 +441,25 @@
                         <net_export_rate units="total substrate/min">0</net_export_rate>
                     </substrate>
                     <substrate name="il10">
-                        <secretion_rate units="1/min">0</secretion_rate>
+                        <secretion_rate units="1/min">5</secretion_rate>
                         <secretion_target units="substrate density">1</secretion_target>
                         <uptake_rate units="1/min">10</uptake_rate>
                         <net_export_rate units="total substrate/min">0</net_export_rate>
                     </substrate>
                     <substrate name="tnfa">
-                        <secretion_rate units="1/min">0</secretion_rate>
+                        <secretion_rate units="1/min">5</secretion_rate>
                         <secretion_target units="substrate density">1</secretion_target>
                         <uptake_rate units="1/min">10</uptake_rate>
                         <net_export_rate units="total substrate/min">0</net_export_rate>
                     </substrate>
                     <substrate name="proliferation factor">
-                        <secretion_rate units="1/min">0</secretion_rate>
+                        <secretion_rate units="1/min">20</secretion_rate>
+                        <secretion_target units="substrate density">1</secretion_target>
+                        <uptake_rate units="1/min">0</uptake_rate>
+                        <net_export_rate units="total substrate/min">0</net_export_rate>
+                    </substrate>
+                    <substrate name="mmp">
+                        <secretion_rate units="1/min">100</secretion_rate>
                         <secretion_target units="substrate density">1</secretion_target>
                         <uptake_rate units="1/min">0</uptake_rate>
                         <net_export_rate units="total substrate/min">0</net_export_rate>
@@ -445,27 +471,23 @@
                     <other_dead_phagocytosis_rate units="1/min">0.0</other_dead_phagocytosis_rate>
                     <live_phagocytosis_rates>
                         <phagocytosis_rate name="cancer cell" units="1/min">0.0</phagocytosis_rate>
-                        <phagocytosis_rate name="M1" units="1/min">0.0</phagocytosis_rate>
-                        <phagocytosis_rate name="M2" units="1/min">0.0</phagocytosis_rate>
+                        <phagocytosis_rate name="macrophage" units="1/min">0.0</phagocytosis_rate>
                     </live_phagocytosis_rates>
                     <attack_rates>
                         <attack_rate name="cancer cell" units="1/min">0.0</attack_rate>
-                        <attack_rate name="M1" units="1/min">0.0</attack_rate>
-                        <attack_rate name="M2" units="1/min">0.0</attack_rate>
+                        <attack_rate name="macrophage" units="1/min">0.0</attack_rate>
                     </attack_rates>
                     <attack_damage_rate units="1/min">1.0</attack_damage_rate>
                     <attack_duration units="min">0.1</attack_duration>
                     <fusion_rates>
                         <fusion_rate name="cancer cell" units="1/min">0.0</fusion_rate>
-                        <fusion_rate name="M1" units="1/min">0.0</fusion_rate>
-                        <fusion_rate name="M2" units="1/min">0.0</fusion_rate>
+                        <fusion_rate name="macrophage" units="1/min">0.0</fusion_rate>
                     </fusion_rates>
                 </cell_interactions>
                 <cell_transformations>
                     <transformation_rates>
                         <transformation_rate name="cancer cell" units="1/min">0.0</transformation_rate>
-                        <transformation_rate name="M1" units="1/min">0.0</transformation_rate>
-                        <transformation_rate name="M2" units="1/min">0.0</transformation_rate>
+                        <transformation_rate name="macrophage" units="1/min">0.0</transformation_rate>
                     </transformation_rates>
                 </cell_transformations>
                 <cell_integrity>
@@ -476,195 +498,21 @@
             <custom_data>
                 <elastic_coefficient conserved="false" units="1/min" description="">0.01</elastic_coefficient>
                 <kill_rate conserved="false" units="1/min" description="">0.06667</kill_rate>
-                <attachment_lifetime conserved="false" units="min" description="">60</attachment_lifetime>
-                <attachment_rate conserved="false" units="1/min" description="">0.2</attachment_rate>
-                <il10_threshold conserved="false" units="dimensionless" description="">10000</il10_threshold>
-                <polarization_lifetime conserved="false" units="min" description="">120</polarization_lifetime>
-                <prob_polarize conserved="false" units="dimensionless" description="">0.2</prob_polarize>
-                <prolif_saturation conserved="false" units="dimensionless" description="">1</prolif_saturation>
                 <max_attachment_distance conserved="false" units="micron" description="">18.0</max_attachment_distance>
                 <min_attachment_distance conserved="false" units="micron" description="">14.0</min_attachment_distance>
-                <hypoxic_motility_saturation conserved="false" units="dimensionless" description="">38</hypoxic_motility_saturation>
-                <il10_motility_saturation conserved="false" units="dimensionless" description="">0.5</il10_motility_saturation>
-                <hypoxia_il10_motility_bias conserved="false" units="dimensionless" description="">0.5</hypoxia_il10_motility_bias>
-                <tnfa_threshold conserved="false" units="dimensionless" description="">10000</tnfa_threshold>
-                <il10_inhibit_polarization_threshold conserved="false" units="dimensionless" description="">50000</il10_inhibit_polarization_threshold>
-            </custom_data>
-            <initial_parameter_distributions enabled="false">
-          </initial_parameter_distributions>
-        </cell_definition>
-        <cell_definition name="M2" ID="2">
-            <phenotype>
-                <cycle code="5" name="live">
-                    <phase_transition_rates units="1/min">
-                        <rate start_index="0" end_index="0" fixed_duration="true">0.0</rate>
-                    </phase_transition_rates>
-                    <standard_asymmetric_division enabled="False">
-                        <asymmetric_division_probability name="cancer cell" units="dimensionless">0</asymmetric_division_probability>
-                        <asymmetric_division_probability name="M1" units="dimensionless">0</asymmetric_division_probability>
-                        <asymmetric_division_probability name="M2" units="dimensionless">1.0</asymmetric_division_probability>
-                    </standard_asymmetric_division>
-                </cycle>
-                <death>
-                    <model code="100" name="apoptosis">
-                        <death_rate units="1/min">0</death_rate>
-                        <phase_durations units="min">
-                            <duration index="0" fixed_duration="true">516</duration>
-                        </phase_durations>
-                        <parameters>
-                            <unlysed_fluid_change_rate units="1/min">0.05</unlysed_fluid_change_rate>
-                            <lysed_fluid_change_rate units="1/min">0</lysed_fluid_change_rate>
-                            <cytoplasmic_biomass_change_rate units="1/min">1.66667e-02</cytoplasmic_biomass_change_rate>
-                            <nuclear_biomass_change_rate units="1/min">5.83333e-03</nuclear_biomass_change_rate>
-                            <calcification_rate units="1/min">0</calcification_rate>
-                            <relative_rupture_volume units="dimensionless">2.0</relative_rupture_volume>
-                        </parameters>
-                    </model>
-                    <model code="101" name="necrosis">
-                        <death_rate units="1/min">0.0</death_rate>
-                        <phase_durations units="min">
-                            <duration index="0" fixed_duration="true">0</duration>
-                            <duration index="1" fixed_duration="true">86400</duration>
-                        </phase_durations>
-                        <parameters>
-                            <unlysed_fluid_change_rate units="1/min">1.11667e-2</unlysed_fluid_change_rate>
-                            <lysed_fluid_change_rate units="1/min">8.33333e-4</lysed_fluid_change_rate>
-                            <cytoplasmic_biomass_change_rate units="1/min">5.33333e-5</cytoplasmic_biomass_change_rate>
-                            <nuclear_biomass_change_rate units="1/min">2.16667e-3</nuclear_biomass_change_rate>
-                            <calcification_rate units="1/min">0</calcification_rate>
-                            <relative_rupture_volume units="dimensionless">2.0</relative_rupture_volume>
-                        </parameters>
-                    </model>
-                </death>
-                <volume>
-                    <total units="micron^3">2000</total>
-                    <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
-                    <fluid_change_rate units="1/min">0.05</fluid_change_rate>
-                    <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
-                    <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
-                    <calcified_fraction units="dimensionless">0</calcified_fraction>
-                    <calcification_rate units="1/min">0</calcification_rate>
-                    <relative_rupture_volume units="dimensionless">2.0</relative_rupture_volume>
-                </volume>
-                <mechanics>
-                    <cell_cell_adhesion_strength units="micron/min">0</cell_cell_adhesion_strength>
-                    <cell_cell_repulsion_strength units="micron/min">10.0</cell_cell_repulsion_strength>
-                    <relative_maximum_adhesion_distance units="dimensionless">1.25</relative_maximum_adhesion_distance>
-                    <cell_adhesion_affinities>
-                        <cell_adhesion_affinity name="cancer cell">1.0</cell_adhesion_affinity>
-                        <cell_adhesion_affinity name="M1">1.0</cell_adhesion_affinity>
-                        <cell_adhesion_affinity name="M2">1.0</cell_adhesion_affinity>
-                    </cell_adhesion_affinities>
-                    <options>
-                        <set_relative_equilibrium_distance enabled="false" units="dimensionless">1.8</set_relative_equilibrium_distance>
-                        <set_absolute_equilibrium_distance enabled="false" units="micron">15.12</set_absolute_equilibrium_distance>
-                    </options>
-                    <attachment_elastic_constant units="1/min">0.01</attachment_elastic_constant>
-                    <attachment_rate units="1/min">0.0</attachment_rate>
-                    <detachment_rate units="1/min">0.0</detachment_rate>
-                    <maximum_number_of_attachments>12</maximum_number_of_attachments>
-                </mechanics>
-                <motility>
-                    <speed units="micron/min">0.75</speed>
-                    <persistence_time units="min">5</persistence_time>
-                    <migration_bias units="dimensionless">0.5</migration_bias>
-                    <options>
-                        <enabled>true</enabled>
-                        <use_2D>true</use_2D>
-                        <chemotaxis>
-                            <enabled>true</enabled>
-                            <substrate>il10</substrate>
-                            <direction>1</direction>
-                        </chemotaxis>
-                        <advanced_chemotaxis>
-                            <enabled>false</enabled>
-                            <normalize_each_gradient>false</normalize_each_gradient>
-                            <chemotactic_sensitivities>
-                                <chemotactic_sensitivity substrate="oxygen">1</chemotactic_sensitivity>
-                                <chemotactic_sensitivity substrate="il10">1</chemotactic_sensitivity>
-                                <chemotactic_sensitivity substrate="tnfa">0.0</chemotactic_sensitivity>
-                                <chemotactic_sensitivity substrate="proliferation factor">0.0</chemotactic_sensitivity>
-                                <chemotactic_sensitivity substrate="substrate">0.0</chemotactic_sensitivity>
-                            </chemotactic_sensitivities>
-                        </advanced_chemotaxis>
-                    </options>
-                </motility>
-                <secretion>
-                    <substrate name="oxygen">
-                        <secretion_rate units="1/min">0</secretion_rate>
-                        <secretion_target units="substrate density">38</secretion_target>
-                        <uptake_rate units="1/min">0</uptake_rate>
-                        <net_export_rate units="total substrate/min">0</net_export_rate>
-                    </substrate>
-                    <substrate name="il10">
-                        <secretion_rate units="1/min">0</secretion_rate>
-                        <secretion_target units="substrate density">1</secretion_target>
-                        <uptake_rate units="1/min">1</uptake_rate>
-                        <net_export_rate units="total substrate/min">0</net_export_rate>
-                    </substrate>
-                    <substrate name="tnfa">
-                        <secretion_rate units="1/min">0</secretion_rate>
-                        <secretion_target units="substrate density">1</secretion_target>
-                        <uptake_rate units="1/min">0</uptake_rate>
-                        <net_export_rate units="total substrate/min">0</net_export_rate>
-                    </substrate>
-                    <substrate name="proliferation factor">
-                        <secretion_rate units="1/min">1000</secretion_rate>
-                        <secretion_target units="substrate density">1</secretion_target>
-                        <uptake_rate units="1/min">0</uptake_rate>
-                        <net_export_rate units="total substrate/min">0</net_export_rate>
-                    </substrate>
-                </secretion>
-                <cell_interactions>
-                    <apoptotic_phagocytosis_rate units="1/min">0.0</apoptotic_phagocytosis_rate>
-                    <necrotic_phagocytosis_rate units="1/min">0.0</necrotic_phagocytosis_rate>
-                    <other_dead_phagocytosis_rate units="1/min">0.0</other_dead_phagocytosis_rate>
-                    <live_phagocytosis_rates>
-                        <phagocytosis_rate name="cancer cell" units="1/min">0.0</phagocytosis_rate>
-                        <phagocytosis_rate name="M1" units="1/min">0.0</phagocytosis_rate>
-                        <phagocytosis_rate name="M2" units="1/min">0.0</phagocytosis_rate>
-                    </live_phagocytosis_rates>
-                    <attack_rates>
-                        <attack_rate name="cancer cell" units="1/min">0.0</attack_rate>
-                        <attack_rate name="M1" units="1/min">0.0</attack_rate>
-                        <attack_rate name="M2" units="1/min">0.0</attack_rate>
-                    </attack_rates>
-                    <attack_damage_rate units="1/min">1.0</attack_damage_rate>
-                    <attack_duration units="min">0.1</attack_duration>
-                    <fusion_rates>
-                        <fusion_rate name="cancer cell" units="1/min">0.0</fusion_rate>
-                        <fusion_rate name="M1" units="1/min">0.0</fusion_rate>
-                        <fusion_rate name="M2" units="1/min">0.0</fusion_rate>
-                    </fusion_rates>
-                </cell_interactions>
-                <cell_transformations>
-                    <transformation_rates>
-                        <transformation_rate name="cancer cell" units="1/min">0.0</transformation_rate>
-                        <transformation_rate name="M1" units="1/min">0.0</transformation_rate>
-                        <transformation_rate name="M2" units="1/min">0.0</transformation_rate>
-                    </transformation_rates>
-                </cell_transformations>
-                <cell_integrity>
-                    <damage_rate units="1/min">0.0</damage_rate>
-                    <damage_repair_rate units="1/min">0.0</damage_repair_rate>
-                </cell_integrity>
-            </phenotype>
-            <custom_data>
-                <elastic_coefficient conserved="false" units="1/min" description="">0.01</elastic_coefficient>
-                <kill_rate conserved="false" units="1/min" description="">0.06667</kill_rate>
-                <attachment_lifetime conserved="false" units="min" description="">60</attachment_lifetime>
+                <il10_motility_saturation conserved="false" units="dimensionless" description="">0</il10_motility_saturation>
+                <hypoxia_il10_motility_bias conserved="false" units="dimensionless" description="">0</hypoxia_il10_motility_bias>
+                <hypoxic_motility_saturation conserved="false" units="dimensionless" description="">0</hypoxic_motility_saturation>
+                <prolif_saturation conserved="false" units="dimensionless" description="">0</prolif_saturation>
                 <attachment_rate conserved="false" units="1/min" description="">0.2</attachment_rate>
-                <polarization_lifetime conserved="false" units="min" description="">120</polarization_lifetime>
-                <prob_polarize conserved="false" units="dimensionless" description="">0.25</prob_polarize>
-                <prolif_saturation conserved="false" units="dimensionless" description="">1</prolif_saturation>
-                <max_attachment_distance conserved="false" units="micron" description="">18.0</max_attachment_distance>
-                <min_attachment_distance conserved="false" units="micron" description="">14.0</min_attachment_distance>
-                <hypoxic_motility_saturation conserved="false" units="dimensionless" description="">38</hypoxic_motility_saturation>
-                <il10_motility_saturation conserved="false" units="dimensionless" description="">0.5</il10_motility_saturation>
-                <hypoxia_il10_motility_bias conserved="false" units="dimensionless" description="">0.5</hypoxia_il10_motility_bias>
-                <tnfa_threshold conserved="false" units="dimensionless" description="">10000</tnfa_threshold>
-                <il10_inhibit_polarization_threshold conserved="false" units="dimensionless" description="">50000</il10_inhibit_polarization_threshold>
+                <polarization_lifetime conserved="false" units="min" description="">60</polarization_lifetime>
+                <il10_inhibition_saturation conserved="false" units="dimensionless" description="">0.5</il10_inhibition_saturation>
+                <tam_relative_il10_secretion conserved="false" units="dimensionless" description="">1.5</tam_relative_il10_secretion>
+                <max_polarization_step conserved="false" units="dimensionless" description="">0.1</max_polarization_step>
+                <attachment_prob conserved="false" units="min" description="">0.1</attachment_prob>
+                <m1_polarization conserved="false" units="dimensionless" description="">0</m1_polarization>
+                <m2_polarization conserved="false" units="dimensionless" description="">0</m2_polarization>
+                <mmp_saturation conserved="false" units="dimensionless" description="">0</mmp_saturation>
             </custom_data>
             <initial_parameter_distributions enabled="false">
           </initial_parameter_distributions>
@@ -673,7 +521,7 @@
 
     <initial_conditions>
         <cell_positions type="csv" enabled="true">
-            <folder>.</folder>
+            <folder>./config</folder>
             <filename>test_cells.csv</filename>
         </cell_positions>
     </initial_conditions>
@@ -691,6 +539,5 @@
         <thickness_of_immune_cell_seeding_region type="double" units="micron" description="">50</thickness_of_immune_cell_seeding_region>
         <tumor_radius type="double" units="micron" description="">35</tumor_radius>
         <init_cell_count type="int" units="dimensionless" description="">100</init_cell_count>
-        <base_prolif_rate type="double" units="dimensionless" description="">0.00072</base_prolif_rate>
     </user_parameters>
 </PhysiCell_settings>
