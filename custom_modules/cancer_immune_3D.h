@@ -75,6 +75,7 @@ using namespace PhysiCell;
 
 extern Cell_Definition* pM1; 
 extern Cell_Definition* pM2; 
+extern Cell_Definition* pMacro; 
 
 void update_cancer_phenotype(Cell* pCell, Phenotype& phenotype, double dt);
 
@@ -87,48 +88,33 @@ void m2_motility( Cell* pCell, Phenotype& phenotype, double dt );
 void m2_cell_rule( Cell* pCell, Phenotype& phenotype, double dt );
 void m2_update_phenotype( Cell* pCell, Phenotype& phenotype, double dt);
 
+void macro_motility( Cell* pCell, Phenotype& phenotype, double dt );
+void macro_cell_rule( Cell* pCell, Phenotype& phenotype, double dt );
+void macro_update_phenotype( Cell* pCell, Phenotype& phenotype, double dt);
+
 bool trigger_apoptosis( Cell* pAttacker, Cell* pTarget ); 
 Cell* check_neighbors_for_attachment( Cell* pAttacker , double dt ); 
 bool attempt_attachment( Cell* pAttacker, Cell* pTarget , double dt );
 
-std::vector<std::vector<double>> create_cell_sphere_positions(double cell_radius, double sphere_radius);
-std::vector<std::vector<double>> create_cell_circle_positions(double cell_radius, double circle_radius);
-std::vector<std::vector<double>> create_cell_circle_positions_by_count(int cell_count);
+void randomPolarization(double &p0, double &p1, double &p2);
 
-// void create_immune_cell_type( void ); 
+std::vector<std::vector<double>> create_cell_sphere_positions(double sphere_radius);
+std::vector<std::vector<double>> create_cell_circle_positions(double circle_radius);
+std::vector<std::vector<double>> create_cell_circle_positions_by_count( int cell_count );
+std::vector<std::vector<double>> create_cell_sphere_positions_by_count(int cell_count);
 
 // set the tumor cell properties, then call the function 
 // to set up the tumor cells 
 void create_cell_types( void );
 
 // set up the microenvironment to include the immunostimulatory factor 
-void setup_microenvironment( void );   
+void setup_microenvironment( void );
+void shuffle(std::vector<std::vector<double>>& positions);
 void spawn_immune_cells( void );
-// void setup_tissue( void );
-void setup_tissue( int init_cell_count, int initial_num_immune_cells );
+
+void setup_tissue( int init_cell_count, double macro_prop );
+void setup_tissue_from_csv( void );
 
 std::vector<std::string> cancer_immune_coloring_function( Cell* );
 
-// cell rules for extra elastic adhesion
-
-// void attach_cells( Cell* pCell_1, Cell* pCell_2 );
-// void dettach_cells( Cell* pCell_1 , Cell* pCell_2 );
-
-// void add_elastic_velocity( Cell* pActingOn, Cell* pAttachedTo , double elastic_constant ); 
-// void extra_elastic_attachment_mechanics( Cell* pCell, Phenotype& phenotype, double dt );
-
-// immune cell functions for attacking a cell 
-// bool immune_cell_attempt_apoptosis( Cell* pAttacker, Cell* pTarget, double dt ); 
-
-// void immune_cell_rule( Cell* pCell, Phenotype& phenotype, double dt ); 
-
-// void macrophage_cell_rule( Cell* pCell, Phenotype& phenotype, double dt );
-
-// void immune_cell_attach( Cell* pAttacker, Cell* pTarget ); // use attach_cells?? 
-// void immune_cell_dettach( Cell* pAttacker, Cell* pTarget ); // use dettach_cells ?? 
-
 void adhesion_contact_function( Cell* pActingOn, Phenotype& pao, Cell* pAttachedTo, Phenotype& pat , double dt );
-
-// immune cell functions for motility 
-
-// void immune_cell_motility( Cell* pCell, Phenotype& phenotype, double dt ); 

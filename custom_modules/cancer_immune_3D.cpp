@@ -67,349 +67,205 @@
 
 #include "./cancer_immune_3D.h"
 
-Cell_Definition* pM1; 
-Cell_Definition* pM2;
+Cell_Definition* pMacro;
 
 void update_cancer_phenotype(Cell* pCell, Phenotype& phenotype, double dt)
 {
-	// if cell is dead, don't bother with future phenotype changes
+	// supported cycle models:
+		// advanced_Ki67_cycle_model= 0;
+		// basic_Ki67_cycle_model=1
+		// live_cells_cycle_model = 5; 
+    
+    //rwh
+    static double Xmin = microenvironment.mesh.bounding_box[0]; 
+	static double Ymin = microenvironment.mesh.bounding_box[1]; 
+
+	static double Xmax = microenvironment.mesh.bounding_box[3]; 
+	static double Ymax = microenvironment.mesh.bounding_box[4]; 
+
+	if ((pCell->position[0] <= Xmin) || (pCell->position[0] >= Xmax)) return;
+	if ((pCell->position[1] <= Ymin) || (pCell->position[1] >= Ymax)) return;
+
+
+
 	if( phenotype.death.dead == true )
 	{
 		pCell->functions.update_phenotype = NULL; 		
 		return; 
 	}
+	
+	// set up shortcuts to find the Q and K(1) phases (assuming Ki67 basic or advanced model)
+	static bool indices_initiated = false; 
+	static int start_phase_index; // Q_phase_index; 
+	static int end_phase_index; // K_phase_index;
+	static int necrosis_index; 
+	
+	static int oxygen_substrate_index = pCell->get_microenvironment()->find_density_index( "oxygen" ); 
+	
+	if( indices_initiated == false )
+	{
+		// Ki67 models
+		
+		if( phenotype.cycle.model().code == PhysiCell_constants::advanced_Ki67_cycle_model || 
+			phenotype.cycle.model().code == PhysiCell_constants::basic_Ki67_cycle_model )
+		{
+			start_phase_index = phenotype.cycle.model().find_phase_index( PhysiCell_constants::Ki67_negative );
+			necrosis_index = phenotype.death.find_death_model_index( PhysiCell_constants::necrosis_death_model ); 
+			
+			if( phenotype.cycle.model().code == PhysiCell_constants::basic_Ki67_cycle_model )
+			{
+				end_phase_index = 
+					phenotype.cycle.model().find_phase_index( PhysiCell_constants::Ki67_positive );
+				indices_initiated = true; 
+			}
+			if( phenotype.cycle.model().code == PhysiCell_constants::advanced_Ki67_cycle_model )
+			{
+				end_phase_index = 
+					phenotype.cycle.model().find_phase_index( PhysiCell_constants::Ki67_positive_premitotic );
+				indices_initiated = true; 
+			}
+		}
+		
+		// live model 
+			
+		if( phenotype.cycle.model().code == PhysiCell_constants::live_cells_cycle_model )
+		{
+			start_phase_index = phenotype.cycle.model().find_phase_index( PhysiCell_constants::live );
+			necrosis_index = phenotype.death.find_death_model_index( PhysiCell_constants::necrosis_death_model ); 
+			end_phase_index = phenotype.cycle.model().find_phase_index( PhysiCell_constants::live );
+			indices_initiated = true; 
+		}
+		
+		// cytometry models 
+		
+		if( phenotype.cycle.model().code == PhysiCell_constants::flow_cytometry_cycle_model || 
+			phenotype.cycle.model().code == PhysiCell_constants::flow_cytometry_separated_cycle_model )
+		{
+			start_phase_index = phenotype.cycle.model().find_phase_index( PhysiCell_constants::G0G1_phase );
+			necrosis_index = phenotype.death.find_death_model_index( PhysiCell_constants::necrosis_death_model ); 
+			end_phase_index = phenotype.cycle.model().find_phase_index( PhysiCell_constants::S_phase );
+			indices_initiated = true; 
+		}	
+
+		if( phenotype.cycle.model().code == PhysiCell_constants::cycling_quiescent_model )
+		{
+			start_phase_index = phenotype.cycle.model().find_phase_index( PhysiCell_constants::quiescent );
+			necrosis_index = phenotype.death.find_death_model_index( PhysiCell_constants::necrosis_death_model ); 
+			end_phase_index = phenotype.cycle.model().find_phase_index( PhysiCell_constants::cycling );
+			indices_initiated = true; 
+		}
+		
+	}
+	
+	// don't continue if we never "figured out" the current cycle model. 
+	if( indices_initiated == false )
+	{
+		return; 
+	}
+
+	// sample the microenvironment to get the pO2 value 
+	double pO2 = (pCell->nearest_density_vector())[oxygen_substrate_index]; // PhysiCell_constants::oxygen_index]; 
+	int n = pCell->phenotype.cycle.current_phase_index(); 
+	
+	// this multiplier is for linear interpolation of the oxygen value 
+	double multiplier = 1.0;
+	if( pO2 < pCell->parameters.o2_proliferation_saturation )
+	{
+		multiplier = ( pO2 - pCell->parameters.o2_proliferation_threshold ) 
+			/ ( pCell->parameters.o2_proliferation_saturation - pCell->parameters.o2_proliferation_threshold );
+	}
+	if( pO2 < pCell->parameters.o2_proliferation_threshold )
+	{ 
+		multiplier = 0.0; 
+	}
 
     // Find the proliferation factor concentration in the cell's environment
     static int proliferation_factor_index = microenvironment.find_density_index("proliferation factor");
-	// interalized
-	// double prolif_factor = pCell->phenotype.molecular.internalized_total_substrates[proliferation_factor_index];
 	double prolif_factor = pCell->nearest_density_vector()[proliferation_factor_index];
-
-    // std::cout << "Vector elements: ";
-    // for (double value : pCell->phenotype.molecular.internalized_total_substrates) {
-    //     std::cout << value << " ";
-    // }
-    // std::cout << std::endl;
 
 	static int cycle_start_index = live.find_phase_index( PhysiCell_constants::live ); 
 	static int cycle_end_index = live.find_phase_index( PhysiCell_constants::live ); 
-	double base_prolif_rate = parameters.doubles("base_prolif_rate"); 
+	double base_prolif_rate = pCell->parameters.pReference_live_phenotype->cycle.data.transition_rate(cycle_start_index,cycle_end_index);
 	
 	// check if prolif saturation has been reached
-	static int prolif_saturation_i = pCell->custom_data.find_variable_index( "prolif_saturation" ); 
-	double prolif_saturation = pCell->custom_data[prolif_saturation_i];
+	double prolif_saturation = pCell->custom_data["prolif_saturation"];
 
 	// max out
 	if (prolif_factor > prolif_saturation) {
 		prolif_factor = prolif_saturation;
 	}
-	// if (prolif_factor != 0) {
-	// 		std::cout << "prolif_factor: " << prolif_factor << std::endl; 
-	// }
 
-	update_cell_and_death_parameters_O2_based(pCell,phenotype,dt);
+	// now, update the appropriate cycle transition rate 
+	phenotype.cycle.data.transition_rate(start_phase_index,end_phase_index) = (multiplier) * (1 + prolif_factor) *
+		pCell->parameters.pReference_live_phenotype->cycle.data.transition_rate(start_phase_index,end_phase_index);
+	
+	// Update necrosis rate
+	multiplier = 0.0;
+	if( pO2 < pCell->parameters.o2_necrosis_threshold )
+	{
+		multiplier = ( pCell->parameters.o2_necrosis_threshold - pO2 ) 
+			/ ( pCell->parameters.o2_necrosis_threshold - pCell->parameters.o2_necrosis_max );
+	}
+	if( pO2 < pCell->parameters.o2_necrosis_max )
+	{ 
+		multiplier = 1.0; 
+	}	
+	
+	// now, update the necrosis rate 
+	pCell->phenotype.death.rates[necrosis_index] = multiplier * pCell->parameters.max_necrosis_rate; 
+	
+	// check for deterministic necrosis 
+	if( pCell->parameters.necrosis_type == PhysiCell_constants::deterministic_necrosis && multiplier > 1e-16 )
+	{ pCell->phenotype.death.rates[necrosis_index] = 9e99; } 
 
-	// Update the cell cycle transition rate based on the proliferation factor
-	phenotype.cycle.data.transition_rate( cycle_start_index, cycle_end_index ) = base_prolif_rate * (1 + prolif_factor); 
-	// std::cout << "transition_rate: " << phenotype.cycle.data.transition_rate( cycle_start_index, cycle_end_index ) << std::endl; 
+	// adjust adhesion based on mmp
+	static int mmp_i = microenvironment.find_density_index("mmp");
+	double mmp = pCell->nearest_density_vector()[mmp_i];
+	double mmp_saturation = pCell->custom_data["mmp_saturation"];
 
-	return;
+	// max out
+	if (mmp > mmp_saturation) {
+		mmp = mmp_saturation;
+	}
+	phenotype.mechanics.cell_cell_adhesion_strength = (1 - mmp) * 
+		pCell->parameters.pReference_live_phenotype->mechanics.cell_cell_adhesion_strength;
+
+	// update dirichlet nodes
+	microenvironment.remove_dirichlet_node(microenvironment.nearest_voxel_index( pCell->position));
+	return; 
 }
 
 void create_macrophage_cell_type( void )
 {
-	pM1 = find_cell_definition( "M1" ); 
-	pM2 = find_cell_definition( "M2" ); 
+	pMacro = find_cell_definition( "macrophage" ); 
 	
 	static int oxygen_ID = microenvironment.find_density_index( "oxygen" );  
 	
 	// reduce o2 uptake 
-	pM1->phenotype.secretion.uptake_rates[oxygen_ID] *= 
+	pMacro->phenotype.secretion.uptake_rates[oxygen_ID] *= 
 		parameters.doubles("immune_o2_relative_uptake");  
-	
-	pM1->phenotype.mechanics.cell_cell_adhesion_strength *= 
-		parameters.doubles("immune_relative_adhesion"); 
-	pM1->phenotype.mechanics.cell_cell_repulsion_strength *= 
-		parameters.doubles("immune_relative_repulsion"); 
 
-	pM2->phenotype.secretion.uptake_rates[oxygen_ID] *= 
-		parameters.doubles("immune_o2_relative_uptake");  
-	
-	pM2->phenotype.mechanics.cell_cell_adhesion_strength *= 
-		parameters.doubles("immune_relative_adhesion"); 
-	pM2->phenotype.mechanics.cell_cell_repulsion_strength *= 
-		parameters.doubles("immune_relative_repulsion"); 
+	pMacro->phenotype.mechanics.relative_maximum_attachment_distance 
+		= pMacro->custom_data["max_attachment_distance"] / pMacro->phenotype.geometry.radius ; 
 		
-	// figure out mechanics parameters 	
-	pM1->phenotype.mechanics.relative_maximum_attachment_distance 
-		= pM1->custom_data["max_attachment_distance"] / pM1->phenotype.geometry.radius ; 
-		
-	pM1->phenotype.mechanics.attachment_elastic_constant 
-		= pM1->custom_data["elastic_coefficient"]; 		
+	pMacro->phenotype.mechanics.attachment_elastic_constant 
+		= pMacro->custom_data["elastic_coefficient"]; 		
 	
-	pM1->phenotype.mechanics.relative_detachment_distance 
-		= pM1->custom_data["max_attachment_distance" ] / pM1->phenotype.geometry.radius ; 		
-
-	pM2->phenotype.mechanics.relative_maximum_attachment_distance 
-		= pM2->custom_data["max_attachment_distance"] / pM2->phenotype.geometry.radius ; 
-		
-	pM2->phenotype.mechanics.attachment_elastic_constant 
-		= pM2->custom_data["elastic_coefficient"]; 		
-	
-	pM2->phenotype.mechanics.relative_detachment_distance 
-		= pM2->custom_data["max_attachment_distance" ] / pM2->phenotype.geometry.radius ; 	
+	pMacro->phenotype.mechanics.relative_detachment_distance 
+		= pMacro->custom_data["max_attachment_distance" ] / pMacro->phenotype.geometry.radius ; 	
 	
 	// set functions 
-
-	pM1->functions.update_phenotype = m1_update_phenotype; 
-	pM1->functions.custom_cell_rule = m1_cell_rule; 
-	pM1->functions.update_migration_bias = m1_motility;
-	pM1->functions.contact_function = adhesion_contact_function; 
-
-	pM2->functions.update_phenotype = m2_update_phenotype; 
-	pM2->functions.custom_cell_rule = m2_cell_rule;
-	pM2->functions.update_migration_bias = m2_motility;
-	pM2->functions.contact_function = adhesion_contact_function; 
+	pMacro->functions.update_phenotype = macro_update_phenotype; 
+	pMacro->functions.custom_cell_rule = macro_cell_rule;
+	pMacro->functions.update_migration_bias = NULL; // macro_motility;
+	pMacro->functions.contact_function = adhesion_contact_function; 
 	
 	return; 
-}
-
-void m1_motility( Cell* pCell, Phenotype& phenotype, double dt)
-{
-    static int tnfa_index = microenvironment.find_density_index("tnfa");
-
-    // Get local TNF-α concentration
-    double tnfa_concentration = pCell->nearest_density_vector()[tnfa_index];
-
-    // // Define the TNF-α threshold for stopping motility
-	// static int tnfa_motility_saturation_i = pCell->custom_data.find_variable_index( "tnfa_motility_saturation" );
-	// double tnfa_motility_saturation = pCell->custom_data[tnfa_motility_saturation_i];
-
-    // // If TNF-α exceeds the threshold, stop moving
-    // if (tnfa_concentration >= tnfa_motility_saturation)
-    // {
-    //     phenotype.motility.is_motile = true;
-    //     phenotype.motility.migration_bias = 0;
-		
-	// 	// // Debugging output
-	// 	std::cout << "TNF-a: " << tnfa_concentration << std::endl;
-    // }
-    // else if (pCell->state.attached_cells.size() == 0) // If not docked and TNF-a is below threshold, move normally
-    if (pCell->state.attached_cells.size() == 0) // If not docked and TNF-a is below threshold, move normally
-    {
-        phenotype.motility.is_motile = true; 
-        phenotype.motility.migration_bias = 0.5;
-        // Follow the TNF-a gradient
-        phenotype.motility.migration_bias_direction = pCell->nearest_gradient(tnfa_index);
-        normalize(&(phenotype.motility.migration_bias_direction));
-    }
-    else
-    {
-        // If docked to another cell, remain immobile
-        phenotype.motility.is_motile = false;
-    }
-
-    return;
-}
-
-void m1_cell_rule( Cell* pCell, Phenotype& phenotype, double dt )
-{
-	static int attach_lifetime_i = pCell->custom_data.find_variable_index( "attachment_lifetime" ); 
-	
-	if( phenotype.death.dead == true )
-	{
-		// the cell death functions don't automatically turn off custom functions, 
-		// since those are part of mechanics. 
-		pCell->functions.custom_cell_rule = NULL; 
-		return; 
-	}
-	
-	// if I'm docked
-	if( pCell->state.number_of_attached_cells() > 0 )
-	{
-		// attempt to kill my attached cell
-		
-		bool detach_me = false; 
-		
-        if (pCell->state.attached_cells[0]->phenotype.death.dead == false)
-		{
-			trigger_apoptosis( pCell, pCell->state.attached_cells[0] ); 
-			detach_me = true; 
-		}
-		
-		// decide whether to detach 
-		if( UniformRandom() < dt / ( pCell->custom_data[attach_lifetime_i] + 1e-15 ) )
-		{ detach_me = true; }
-		
-		// if I dettach, resume motile behavior 
-		
-		if( detach_me )
-		{
-			detach_cells( pCell, pCell->state.attached_cells[0] ); 
-			phenotype.motility.is_motile = true; 
-		}
-		return; 
-	}
-	
-	// I'm not docked, look for cells nearby and try to docked
-	// if this returns non-NULL, we're now attached to a cell 
-	if( check_neighbors_for_attachment( pCell , dt) )
-	{
-		// set motility off 
-		phenotype.motility.is_motile = false; 
-		return; 
-	}
-	phenotype.motility.is_motile = true; 
-	
-	return; 
-}
-
-void m1_update_phenotype(Cell* pCell, Phenotype& phenotype, double dt) {
-	static int polarization_lifetime_i = pCell->custom_data.find_variable_index( "polarization_lifetime" ); 
-	static int prob_polarize_i = pCell->custom_data.find_variable_index( "prob_polarize" ); 
-
-	static int il10_threshold_i = pCell->custom_data.find_variable_index( "il10_threshold" ); 
-	double il10_threshold = pCell->custom_data[il10_threshold_i];
-
-	// static int il10_index = microenvironment.find_density_index( "il10" );
-    // double il10 = pCell->nearest_density_vector()[il10_index];
-	static int il10_i = microenvironment.find_density_index( "il10" );
-	double il10 = pCell->phenotype.molecular.internalized_total_substrates[il10_i];
-
-	// polarize if applicable after buffer time
-	if( UniformRandom() < dt / ( pCell->custom_data[polarization_lifetime_i] + 1e-15 ) ) {
-		if( il10 > il10_threshold && UniformRandom() < pCell->custom_data[prob_polarize_i]) {
-			std::cout << "il10: " << il10 << std::endl;
-			while (!pCell->state.attached_cells.empty())
-			{
-				Cell* attached_cell = pCell->state.attached_cells.back();
-				detach_cells(pCell, attached_cell); // Detach the cell
-			}
-			// Convert the M1 macrophage into an M2 macrophage
-			pCell->convert_to_cell_definition(*find_cell_definition("M2"));
-			static int tnfa_i = microenvironment.find_density_index( "tnfa" );
-			pCell->phenotype.molecular.internalized_total_substrates[tnfa_i] = 0;
-			pCell->phenotype.molecular.internalized_total_substrates[il10_i] = 0;
-		}
-	}	
-	return;
-}
-
-void m2_motility( Cell* pCell, Phenotype& phenotype, double dt)
-{	
-    std::cout << "m2_motility(): time= " << PhysiCell_globals.current_time << std::endl;
-    static int il10_index = microenvironment.find_density_index("il10");
-    static int oxygen_index = microenvironment.find_density_index("oxygen");
-
-	// get density
-	double il10_concentration = pCell->nearest_density_vector()[il10_index];
-    double oxygen_concentration = pCell->nearest_density_vector()[oxygen_index];
-	// std::cout << "oxygen_concentration: " << oxygen_concentration << std::endl;
-
-	static int hypoxic_motility_saturation_i = pCell->custom_data.find_variable_index( "hypoxic_motility_saturation" ); 
-	double hypoxic_motility_saturation = pCell->custom_data[hypoxic_motility_saturation_i];
-	static int il10_motility_saturation_i = pCell->custom_data.find_variable_index( "il10_motility_saturation" ); 
-	double il10_motility_saturation = pCell->custom_data[il10_motility_saturation_i];
-	
-	// stop moving if ive reached enough il10 or enough hypoxia
-	if (il10_concentration >= il10_motility_saturation_i && oxygen_concentration <= hypoxic_motility_saturation)
-    {
-        phenotype.motility.is_motile = false;
-        return;
-    }
-	else {
-        phenotype.motility.is_motile = true;
-	}
-
-	// Get gradients
-	std::vector<double> il10_gradient = pCell->nearest_gradient(il10_index);
-	std::vector<double> oxygen_gradient = pCell->nearest_gradient(oxygen_index);
-
-	// Reverse oxygen gradient since cells move towards **low oxygen** (hypoxia)
-	for (int i = 0; i < 3; i++)
-	{
-		oxygen_gradient[i] *= -1.0; // Move toward lower oxygen levels (hypoxia)
-	}
-
-	// Define weighting factors
-	static int hypoxia_il10_motility_bias_i = pCell->custom_data.find_variable_index( "hypoxia_il10_motility_bias" ); 
-	double hypoxia_il10_motility_bias = pCell->custom_data[hypoxia_il10_motility_bias_i];
-
-	// Compute weighted migration direction
-	for (int i = 0; i < 3; i++)
-	{
-		phenotype.motility.migration_bias_direction[i] = 
-			hypoxia_il10_motility_bias * oxygen_gradient[i] + (1 - hypoxia_il10_motility_bias) * il10_gradient[i];
-	}
-
-	// Normalize direction vector
-	normalize(&(phenotype.motility.migration_bias_direction));
-
-    return;
-}
-
-void m2_cell_rule( Cell* pCell, Phenotype& phenotype, double dt )
-{
-	// std::cout << "pM2: " << pM2->functions.update_migration_bias << std::endl;
-	// std::cout << "pCell: " << pCell->functions.update_migration_bias << std::endl;
-	m2_motility(pCell, phenotype, dt);
-	if( phenotype.death.dead == true )
-	{
-		// the cell death functions don't automatically turn off custom functions, 
-		// since those are part of mechanics. 
-		
-		// Let's just fully disable now. 
-		pCell->functions.custom_cell_rule = NULL; 
-		return; 
-	}
-}
-
-void m2_update_phenotype( Cell* pCell, Phenotype& phenotype, double dt)
-{
-	
-	static int polarization_lifetime_i = pCell->custom_data.find_variable_index( "polarization_lifetime" ); 
-
-	static int inhib_threshold_i = pCell->custom_data.find_variable_index( "il10_inhibit_polarization_threshold" ); 
-	double il10_inhibit_polarization_threshold = pCell->custom_data[inhib_threshold_i];
-	
-	// get internal il10
-	static int il10_i = microenvironment.find_density_index( "il10" );
-	double internal_il10 = pCell->phenotype.molecular.internalized_total_substrates[il10_i];
-	// std::cout << "internal_il10: " << internal_il10 << std::endl;
-
-	// dont polarize if too much internal il10
-	if (internal_il10 > il10_inhibit_polarization_threshold) {
-		return;
-	}
-
-	// check for tnfa for polarization to m1
-	static int tnfa_threshold_i = pCell->custom_data.find_variable_index( "tnfa_threshold" ); 
-	double tnfa_threshold = pCell->custom_data[tnfa_threshold_i];
-	
-	static int tnfa_i = microenvironment.find_density_index( "tnfa" );
-	double tnfa = pCell->nearest_density_vector()[tnfa_i];
-
-	// polarize if applicable after buffer time
-	if( UniformRandom() < dt / ( pCell->custom_data[polarization_lifetime_i] + 1e-15 ) ) {
-    // If the stimulatory factor exceeds a threshold, differentiate into the new cell type
-		if( tnfa > tnfa_threshold ) {
-			while (!pCell->state.attached_cells.empty())
-			{
-				Cell* attached_cell = pCell->state.attached_cells.back();
-				detach_cells(pCell, attached_cell); // Detach the cell
-			}
-			// Convert to M1 macrophage
-			pCell->convert_to_cell_definition(*find_cell_definition("M1"));
-			static int il10_i = microenvironment.find_density_index( "il10" );
-			pCell->phenotype.molecular.internalized_total_substrates[tnfa_i] = 0;
-			pCell->phenotype.molecular.internalized_total_substrates[il10_i] = 0;
-			return;
-		}
-	}	
 }
 
 bool trigger_apoptosis( Cell* pAttacker, Cell* pTarget )
-{
+{	
+	// std::cout << "trigger_apoptosis" << std::endl;
 	static int apoptosis_model_index = pTarget->phenotype.death.find_death_model_index( "apoptosis" );	
 	
 	// if the Target cell is already dead, don't bother!
@@ -476,6 +332,169 @@ bool attempt_attachment( Cell* pAttacker, Cell* pTarget , double dt )
 	return false; 
 }
 
+void macro_motility( Cell* pCell, Phenotype& phenotype, double dt)
+{
+	// // get densities
+    // static int il10_index = microenvironment.find_density_index("il10");
+    // static int tnfa_index = microenvironment.find_density_index("tnfa");
+    // static int oxygen_index = microenvironment.find_density_index("oxygen");
+	// double il10_concentration = pCell->nearest_density_vector()[il10_index];
+	// double tnfa_concentration = pCell->nearest_density_vector()[tnfa_index];
+    // double oxygen_concentration = pCell->nearest_density_vector()[oxygen_index];
+
+	// // get polarizations
+	// double m1_polarization = pCell->custom_data["m1_polarization"]; 
+	// double m2_polarization = pCell->custom_data["m2_polarization"]; 
+	// double tam_polarization = 1.0 - (m1_polarization + m2_polarization);
+
+	// // m1 behaviors
+	// double rand = UniformRandom(); 
+	// if (rand < m1_polarization) {
+	// 	// towards tnfa
+	// }
+
+	// // m2 behaviors
+	// double rand = UniformRandom(); 
+	// if (rand < m2_polarization) {
+	// 	// towards il10 and hypoxia
+	// }
+
+	// // tam behaviors
+	// double rand = UniformRandom(); 
+	// if (rand < tam_polarization) {
+	// 	// towards il10 and hypoxia
+	// }
+
+    return;
+}
+
+void macro_cell_rule( Cell* pCell, Phenotype& phenotype, double dt )
+{
+	if( phenotype.death.dead == true )
+	{
+		// the cell death functions don't automatically turn off custom functions, 
+		// since those are part of mechanics. 
+		
+		// Let's just fully disable now. 
+		pCell->functions.custom_cell_rule = NULL; 
+		return; 
+	}
+	
+	// get polarizations
+	double m1_polarization = pCell->custom_data["m1_polarization"]; 
+	double m2_polarization = pCell->custom_data["m2_polarization"]; 
+	double tam_polarization = 1.0 - (m1_polarization + m2_polarization);
+
+    static int il10_index = microenvironment.find_density_index("il10");
+	double il10_concentration = pCell->nearest_density_vector()[il10_index];
+
+	// m1 behaviors
+	if (UniformRandom() < m1_polarization) {
+		// induce apoptosis, inhibited by microenv il10
+		double il10_inhibition_saturation = pCell->custom_data["il10_inhibition_saturation"]; 
+		// std::cout << "il10: " << il10_concentration << std::endl;
+		double inhib = 1 - std::min(1.0, il10_concentration / il10_inhibition_saturation);
+		// std::cout << "inhib: " << inhib << std::endl;
+		// I'm not docked, look for cells nearby and try to docked
+		if( UniformRandom() < pCell->custom_data["attachment_prob"] * inhib ) {
+			// if this returns non-NULL, we're now attached to a cell 
+			if( check_neighbors_for_attachment( pCell , dt) ) {
+				// set motility off 
+				phenotype.motility.is_motile = false; 
+			} else {
+				phenotype.motility.is_motile = true; 
+			}
+		}
+		// if I'm docked
+		if( pCell->state.number_of_attached_cells() > 0 ) {
+			bool detach_me = false; 
+			// attempt to kill my attached cell
+       		if (pCell->state.attached_cells[0]->phenotype.death.dead == false) {
+				trigger_apoptosis( pCell, pCell->state.attached_cells[0] ); 
+				detach_me = true; 
+			}
+			// if I dettach, resume motile behavior 
+			if( detach_me ) {
+				detach_cells( pCell, pCell->state.attached_cells[0] ); 
+				phenotype.motility.is_motile = true; 
+			}
+		}
+		// secrete tnfa
+    	static int tnfa_index = microenvironment.find_density_index("tnfa");
+		// double tnfa = pCell->nearest_density_vector()[tnfa_index];
+		// std::cout << "tnfa: " << tnfa << std::endl;
+		phenotype.secretion.secretion_rates[tnfa_index] = m1_polarization * 
+			pCell->parameters.pReference_live_phenotype->secretion.secretion_rates[tnfa_index];
+	}
+
+	// m2 behaviors
+	if (UniformRandom() < m2_polarization) {
+	// promote proliferation
+    	static int proliferation_factor_i = microenvironment.find_density_index("proliferation factor");
+		phenotype.secretion.secretion_rates[proliferation_factor_i] = m2_polarization * 
+			pCell->parameters.pReference_live_phenotype->secretion.secretion_rates[proliferation_factor_i];
+	// secrete il10
+	    static int il10_i = microenvironment.find_density_index("il10");
+		phenotype.secretion.secretion_rates[il10_i] = m2_polarization * 
+			pCell->parameters.pReference_live_phenotype->secretion.secretion_rates[il10_i];
+	}
+
+	// tam behaviors
+	if (UniformRandom() < tam_polarization) {
+		double tam_relative_il10_secretion = pCell->custom_data["tam_relative_il10_secretion"]; 
+	// promote proliferation
+		static int proliferation_factor_i = microenvironment.find_density_index("proliferation factor");
+		phenotype.secretion.secretion_rates[proliferation_factor_i] = tam_polarization * tam_relative_il10_secretion * 
+			pCell->parameters.pReference_live_phenotype->secretion.secretion_rates[proliferation_factor_i];
+	// secrete mmp (weaken adhesion)
+		static int mmp_i = microenvironment.find_density_index("mmp");
+		phenotype.secretion.secretion_rates[mmp_i] = tam_polarization * 
+			pCell->parameters.pReference_live_phenotype->secretion.secretion_rates[mmp_i];
+	// secrete more il10 (stronger than m2)
+		phenotype.secretion.secretion_rates[il10_index] = tam_polarization * tam_relative_il10_secretion * 
+			pCell->parameters.pReference_live_phenotype->secretion.secretion_rates[il10_index];
+	}
+}
+
+void macro_update_phenotype( Cell* pCell, Phenotype& phenotype, double dt)
+{
+	// update dirichlet
+	microenvironment.remove_dirichlet_node(microenvironment.nearest_voxel_index( pCell->position));
+
+	// polarize if applicable after buffer time 
+	if( UniformRandom() < dt / ( pCell->custom_data[ "polarization_lifetime"] + 1e-15 ) ) {
+		// get densities
+		static int il10_index = microenvironment.find_density_index("il10");
+		static int tnfa_index = microenvironment.find_density_index("tnfa");
+		double il10 = pCell->nearest_density_vector()[il10_index];
+		double tnfa = pCell->nearest_density_vector()[tnfa_index];
+		double prop_tnfa = tnfa / (il10 + tnfa);
+		double prop_il10 = il10 / (il10 + tnfa);
+		std::vector<double> delta_polarization = {prop_tnfa, 0, prop_il10};
+
+		// get current polarization
+		double m1_polarization = pCell->custom_data["m1_polarization"]; 
+		double m2_polarization = pCell->custom_data["m2_polarization"]; 
+		double tam_polarization = 1.0 - (m1_polarization + m2_polarization);
+		std::vector<double> curr_polarization = {m1_polarization, m2_polarization, tam_polarization};
+
+		// change polarization based on delta
+		double max_polarization_step = pCell->custom_data[ "max_polarization_step" ]; 
+		for (int i = 0; i < 3; i++) {
+			curr_polarization[i] += max_polarization_step * (delta_polarization[i] - curr_polarization[i]);
+		}
+		// normalize
+		double total_polarization = curr_polarization[0] + curr_polarization[1] + curr_polarization[2];
+		for (int i = 0; i < 3; i++) {
+			curr_polarization[i] /= total_polarization;
+		}
+		// update data
+		pCell->custom_data["m1_polarization"] = curr_polarization[0];
+		pCell->custom_data["m2_polarization"] = curr_polarization[1];
+	}
+	return;
+}
+
 void create_cell_types( void )
 {
 	// use the same random seed so that future experiments have the 
@@ -487,33 +506,20 @@ void create_cell_types( void )
 	{
 		SeedRandom(parameters.ints("random_seed"));
 	}
-	
 	// housekeeping 
 	
 	initialize_default_cell_definition();
 	
-	
 	cell_defaults.parameters.o2_proliferation_saturation = 38.0;  
 	cell_defaults.parameters.o2_reference = 38.0; 
 
-	static int oxygen_ID = microenvironment.find_density_index( "oxygen" ); // 0 
-	// static int immuno_ID = microenvironment.find_density_index( "immunostimulatory factor" ); // 1
+	static int oxygen_ID = microenvironment.find_density_index( "oxygen" );
 	
 	/*
 	   This parses the cell definitions in the XML config file. 
 	*/
 
 	initialize_cell_definitions_from_pugixml(); 
-	
-	// // change the max cell-cell adhesion distance 
-	// cell_defaults.phenotype.mechanics.relative_maximum_attachment_distance = 
-	// 	cell_defaults.custom_data["max_attachment_distance"] / cell_defaults.phenotype.geometry.radius;
-		
-	// cell_defaults.phenotype.mechanics.relative_detachment_distance 
-	// 	= cell_defaults.custom_data["max_attachment_distance"] / cell_defaults.phenotype.geometry.radius ; 
-		
-	// cell_defaults.phenotype.mechanics.attachment_elastic_constant 
-	// 	= cell_defaults.custom_data[ "elastic_coefficient" ];	
 		
 	cell_defaults.functions.update_phenotype = update_cancer_phenotype;
 	cell_defaults.functions.custom_cell_rule = NULL; 
@@ -521,26 +527,13 @@ void create_cell_types( void )
 	cell_defaults.functions.update_migration_bias = NULL; 
 
 	// create the immune cell type 
-	// create_immune_cell_type(); 
-
-	// create the monocyte and macrophage cell type 
-	// create_monocyte_cell_type();
 	create_macrophage_cell_type();
 
 	build_cell_definitions_maps(); 
 
-	/*
-	   This intializes cell signal and response dictionaries 
-	*/
-
 	setup_signal_behavior_dictionaries(); 	
 
-	/*
-       Cell rule definitions 
-	*/
-
 	setup_cell_rules(); 
-
 
 	display_cell_definitions( std::cout ); 
 	
@@ -549,19 +542,83 @@ void create_cell_types( void )
 
 void setup_microenvironment( void )
 {
-	
-	// if( default_microenvironment_options.simulate_2D == true )
-	// {
-	// 	std::cout << "Warning: overriding 2D setting to return to 3D" << std::endl; 
-	// 	default_microenvironment_options.simulate_2D = false; 
-	// }
-	
 	initialize_microenvironment(); 	
 
-	return; 
+	std::vector< double > position = {0.0,0.0,0.0};
+	for( unsigned int n=0; n < microenvironment.number_of_voxels() ; n++ ) {
+		microenvironment.add_dirichlet_node(n,default_microenvironment_options.Dirichlet_condition_vector);
+	}
+
+	return;
 }	
 
-void setup_tissue( int init_cell_count, int initial_num_immune_cells )
+void setup_tissue( int init_cell_count, double macro_prop )
+{	
+	// place a cluster of tumor cells at the center 
+	Cell* pCell = NULL; 
+	std::vector<std::vector<double>> positions;
+	int initial_num_immune_cells = (int) round(init_cell_count * macro_prop);
+	
+	positions = create_cell_circle_positions_by_count(init_cell_count + initial_num_immune_cells); 
+	shuffle(positions);
+
+    // double proportion_m2_macrophages = 0.5;
+	
+	std::cout << "creating " << positions.size() << " closely-packed cells ... " << std::endl; 
+		
+	for( int i=0; i < positions.size(); i++ )
+	{	
+		// create immune cell
+		if (i < initial_num_immune_cells) {
+			pCell = create_cell(*pMacro);
+			double m1, m2, tam;
+    		// randomPolarization(m1, m2, tam);
+			m1 = UniformRandom(); 
+			m2 = 1 - m1; 
+			pCell->custom_data["m1_polarization"] = m1; 
+			pCell->custom_data["m2_polarization"] = m2; 
+        } else {
+            // Create a tumor cell
+            pCell = create_cell();
+        }
+		pCell->assign_position( positions[i] );
+	}
+	microenvironment.remove_dirichlet_node(microenvironment.nearest_voxel_index( pCell->position));
+	
+	return; 
+}
+
+void randomPolarization(double &p0, double &p1, double &p2) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::gamma_distribution<double> gammaDist(1.0, 1.0);
+
+    // Generate three gamma-distributed values
+    double x0 = gammaDist(gen);
+    double x1 = gammaDist(gen);
+    double x2 = gammaDist(gen);
+    
+    // Normalize to sum to 1
+    double sum = x0 + x1 + x2;
+    p0 = x0 / sum;
+    p1 = x1 / sum;
+    p2 = x2 / sum;
+}
+
+void shuffle(std::vector<std::vector<double>>& positions) {
+    srand(time(0));  // Seed the random number generator
+
+    for (size_t i = positions.size() - 1; i > 0; i--)
+    {
+        // Pick a random index between 0 and i
+        size_t j = std::rand() % (i + 1);
+
+        // Swap elements
+        std::swap(positions[i], positions[j]);
+    }
+}
+
+void setup_tissue_from_csv( void )
 {
     // load cells from your CSV file (if enabled)
 	load_cells_from_pugixml();
@@ -569,10 +626,12 @@ void setup_tissue( int init_cell_count, int initial_num_immune_cells )
 	return; 
 }
 
-std::vector<std::vector<double>> create_cell_sphere_positions(double cell_radius, double sphere_radius)
+std::vector<std::vector<double>> create_cell_sphere_positions(double sphere_radius)
 {
 	std::vector<std::vector<double>> cells;
 	int xc=0,yc=0,zc=0;
+
+	double cell_radius = cell_defaults.phenotype.geometry.radius; 
 	double x_spacing= cell_radius*sqrt(3);
 	double y_spacing= cell_radius*2;
 	double z_spacing= cell_radius*sqrt(3);
@@ -599,13 +658,11 @@ std::vector<std::vector<double>> create_cell_sphere_positions(double cell_radius
 	return cells;	
 }
 
-#include <vector>
-#include <cmath>
-
-std::vector<std::vector<double>> create_cell_circle_positions(double cell_radius, double circle_radius)
+std::vector<std::vector<double>> create_cell_circle_positions(double circle_radius)
 {
     std::vector<std::vector<double>> cells;
     int xc = 0, yc = 0;
+	double cell_radius = cell_defaults.phenotype.geometry.radius; 
     
     double x_spacing = cell_radius * sqrt(3);
     double y_spacing = cell_radius * 2;
@@ -631,7 +688,7 @@ std::vector<std::vector<double>> create_cell_circle_positions(double cell_radius
     return cells;
 }
 
-std::vector<std::vector<double>> create_cell_circle_positions_by_count(int cell_count) {
+std::vector<std::vector<double>> create_cell_circle_positions_by_count( int cell_count ) {
 	Cell* pC;
     std::vector<std::vector<double>> cells;
 
@@ -667,58 +724,85 @@ std::vector<std::vector<double>> create_cell_circle_positions_by_count(int cell_
 	return cells;
 }
 
+std::vector<std::vector<double>> create_cell_sphere_positions_by_count(int cell_count) {
+    std::vector<std::vector<double>> cells;
+    
+    double ds = 15;  // Approximate cell spacing
+    double r = 10.0; // Initial radius
+    double pi = 3.14159265358979323846;
+    double two_pi = 2.0 * pi;
+
+    int i = 0;
+    while (i < cell_count) {
+        double phi = 0.0;  // Latitude angle (0 to π)
+        double d_phi = pi / sqrt(cell_count);  // Step size for latitude
+
+        while (phi < pi && i < cell_count) {
+            double theta = 0.0;  // Longitude angle (0 to 2π)
+            int num_cells = (int)floor(two_pi * sin(phi) * r / ds);  // Cells per latitude ring
+            double d_theta = two_pi / num_cells;
+
+            while (theta < two_pi && i < cell_count) {
+                double x = r * sin(phi) * cos(theta);
+                double y = r * sin(phi) * sin(theta);
+                double z = r * cos(phi);
+
+                cells.push_back({x, y, z});
+
+                theta += d_theta;
+                i++;
+            }
+
+            phi += d_phi;
+        }
+
+        r += ds;  // Expand outward
+    }
+
+    return cells;
+}
+
 std::vector<std::string> cancer_immune_coloring_function( Cell* pCell )
 {
 	std::vector< std::string > output( 4, "black" ); 
-
-	// m1 are purple
+	// macros are purple
 	if( pCell->type == 1 )
 	{ 
-		output[0] = "rgb(255, 0, 255)";
-		output[1] = "rgb(255, 0, 255)";
-		output[2] = "rgb(128, 0, 128)";
+		// TODO: color based on polarization and tam expression
+		double m1 = pCell->custom_data["m1_polarization"];
+    	double m2 = pCell->custom_data["m2_polarization"];
+    	double tam = 1.0 - (m1 + m2);
+
+		// Determine the highest polarization value and color based on it
+        if(m1 >= m2 && m1 >= tam) {
+            output[0] = "rgb(255, 0, 0)";  // Red for M1
+        } else if(m2 >= m1 && m2 >= tam) {
+            output[0] = "rgb(0, 255, 0)";  // Green for M2
+        } else {
+            output[0] = "rgb(255, 0, 255)";  // Magenta for TAM
+        }
+        output[1] = output[0];
+		char szTempString [128];
+		// sprintf( szTempString , "rgb(%u,%u,%u)", r, g, b );
+		// output[0].assign( szTempString );
+		// output[1].assign( szTempString );
+
+		sprintf( szTempString , "rgb(%u,%u,%u)", (int)round(output[0][0]/2.0) , (int)round(output[0][1]/2.0) , (int)round(output[0][2]/2.0) );
+		output[2].assign( szTempString );
 		return output;
 	} 
-
-	// m2 are green
-	if( pCell->type == 2 )
-	{ 
-		output[0] = "rgb(0, 255, 0)";
-		output[1] = "rgb(0, 255, 0)";
-		output[2] = "rgb(0, 128, 0)";
-		return output;
-	} 
-
-	// if I'm under attack, color me 
-	// if( pCell->state.attached_cells.size() > 0 )
-	// {
-	// 	output[0] = "darkcyan"; // orangered // "purple"; // 128,0,128
-	// 	output[1] = "black"; // "magenta"; 
-	// 	output[2] = "cyan"; // "magenta"; //255,0,255
-	// 	return output; 
-	// }
 	
-	// live cells are green, but shaded by prolif factor value 
+	// live cells are green, but shaded yellow by prolif factor value 
 	if( pCell->phenotype.death.dead == false )
 	{
 		static int prolif_index = microenvironment.find_density_index( "proliferation factor" );
-		// double prolif_factor = pCell->phenotype.molecular.internalized_total_substrates[prolif_index];
 		double prolif_factor = pCell->nearest_density_vector()[prolif_index];
-
-		// check if prolif saturation has been reached
-		// static int prolif_saturation_i = pCell->custom_data.find_variable_index( "prolif_saturation" ); 
-		// double prolif_saturation = pCell->custom_data[prolif_saturation_i];
-		// if (prolif_factor > prolif_saturation) {
-		// 	prolif_factor = prolif_saturation;
-		// }
-
-		// if (prolif_factor != 0) {
-		// 	std::cout << "prolif factor: " << prolif_factor <<  std::endl; 
-		// }
+		double prolif_saturation = pCell->custom_data["prolif_saturation"];
 		
-		int proliferation = (int) round(prolif_factor * 255.0 ); 
+		int proliferation = (int) round(std::min(1.0, prolif_factor/prolif_saturation) * 255.0 ); 
+
 		char szTempString [128];
-		sprintf( szTempString , "rgb(%u,%u,%u)", proliferation, proliferation, 255-proliferation );
+		sprintf( szTempString , "rgb(%u,%u,%u)", proliferation, proliferation, 255 - proliferation );
 		output[0].assign( szTempString );
 		output[1].assign( szTempString );
 
@@ -728,18 +812,18 @@ std::vector<std::string> cancer_immune_coloring_function( Cell* pCell )
 		return output; 
 	}
 
-	// if not, dead colors 
-	
-	if (pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::apoptotic )  // Apoptotic - Red
-	{
-		output[0] = "rgb(255,0,0)";
-		output[2] = "rgb(125,0,0)";
-	}
+	// if not, dead colors 	
+	// if (pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::apoptotic )  // Apoptotic - Red
+	// {
+	// 	output[0] = "rgb(255,0,0)";
+	// 	output[2] = "rgb(125,0,0)";
+	// }
 	
 	// Necrotic - Brown
 	if( pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic_swelling || 
 		pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic_lysed || 
-		pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic )
+		pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::necrotic || 
+		pCell->phenotype.cycle.current_phase().code == PhysiCell_constants::apoptotic)
 	{
 		output[0] = "rgb(250,138,38)";
 		output[2] = "rgb(139,69,19)";
@@ -764,7 +848,6 @@ void adhesion_contact_function( Cell* pActingOn, Phenotype& pao, Cell* pAttached
 	}
 	
 	axpy( &(pActingOn->velocity) , pao.mechanics.attachment_elastic_constant , displacement ); 
-	
 	return; 
 }
 
